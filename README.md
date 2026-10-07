@@ -38,7 +38,13 @@ Slideshow intervals are 1 minute, 5 minutes, 15 minutes, 30 minutes, 1 hour, 3 h
 
 ### Bing Wallpapers
 
-MyTV Art displays recent Bing homepage images that Bing marks as available for wallpaper use. The app keeps a small local cache for offline playback and shows the photographer or rightsholder information in the details view.
+MyTV Art displays recent Bing homepage images that Bing marks as available for wallpaper use. [Microsoft Support states](https://support.microsoft.com/en-us/bing/explore-the-homepage) that most daily images can be downloaded to use as wallpaper and that images with additional licensing restrictions are not made available for download.
+
+Bing's [live homepage metadata feed](https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=en-US) labels downloadable images with:
+
+> Download this image. Use of this image is restricted to wallpaper only.
+
+MyTV Art therefore accepts only records marked `wp: true`, uses the images only as wallpapers, keeps a bounded local cache for offline playback, and shows the photographer or rightsholder information in the details view. This narrow wallpaper permission does not grant redistribution or other reuse rights; use remains subject to the [Microsoft Terms of Use](https://www.microsoft.com/en-us/legal/terms-of-use) and the rights of each image's owner.
 
 ### Daily Motivation
 
