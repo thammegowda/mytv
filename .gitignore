@@ -1,0 +1,4 @@
+dist/
+*.wgt
+.tools/
+.DS_Store

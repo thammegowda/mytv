@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <radialGradient id="space" cx=".7" cy=".35" r=".9">
+      <stop offset="0" stop-color="#243759"/>
+      <stop offset=".5" stop-color="#10192e"/>
+      <stop offset="1" stop-color="#050812"/>
+    </radialGradient>
+    <radialGradient id="planet">
+      <stop offset="0" stop-color="#9ee6da"/>
+      <stop offset=".48" stop-color="#487e91"/>
+      <stop offset="1" stop-color="#14243b"/>
+    </radialGradient>
+    <linearGradient id="ring">
+      <stop offset="0" stop-color="#d3fff7" stop-opacity="0"/>
+      <stop offset=".45" stop-color="#d3fff7" stop-opacity=".72"/>
+      <stop offset="1" stop-color="#d3fff7" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#space)"/>
+  <g fill="#fff">
+    <circle cx="142" cy="162" r="2" opacity=".7"/><circle cx="317" cy="278" r="1.5" opacity=".8"/>
+    <circle cx="498" cy="92" r="2.5" opacity=".55"/><circle cx="690" cy="340" r="1.5" opacity=".7"/>
+    <circle cx="871" cy="173" r="2" opacity=".85"/><circle cx="1078" cy="91" r="1.5" opacity=".58"/>
+    <circle cx="1284" cy="238" r="2.2" opacity=".78"/><circle cx="1518" cy="112" r="1.6" opacity=".65"/>
+    <circle cx="1733" cy="329" r="2.4" opacity=".72"/><circle cx="1821" cy="181" r="1.4" opacity=".9"/>
+    <circle cx="236" cy="512" r="1.7" opacity=".55"/><circle cx="556" cy="647" r="2" opacity=".8"/>
+    <circle cx="981" cy="491" r="1.5" opacity=".7"/><circle cx="1648" cy="604" r="2" opacity=".6"/>
+    <circle cx="1784" cy="812" r="1.5" opacity=".75"/><circle cx="407" cy="872" r="2.3" opacity=".64"/>
+  </g>
+  <ellipse cx="1290" cy="563" rx="478" ry="111" fill="none" stroke="url(#ring)" stroke-width="24" transform="rotate(-17 1290 563)"/>
+  <circle cx="1290" cy="563" r="255" fill="url(#planet)"/>
+  <path d="M1043 625c120 80 288 92 494 4-39 119-132 189-247 189-113 0-205-69-247-193Z" fill="#08101f" fill-opacity=".48"/>
+  <path d="M812 706c292 60 601-22 956-248" fill="none" stroke="url(#ring)" stroke-width="20" transform="rotate(-4 1290 563)"/>
+</svg>
+

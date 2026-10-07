@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, user-scalable=no">
+    <title>MyTV Art</title>
+    <link rel="icon" href="icon.png">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main id="app" aria-label="Ambient display">
+      <section id="wallpaper-stage" aria-live="off">
+        <img id="wallpaper-a" class="wallpaper-layer" alt="">
+        <img id="wallpaper-b" class="wallpaper-layer" alt="">
+        <div class="vignette"></div>
+      </section>
+
+      <nav id="source-tabs" class="source-tabs details-only" role="tablist" aria-label="Content tabs">
+        <button type="button" role="tab" data-tab="bing">Bing</button>
+        <button type="button" role="tab" data-tab="motivation">Motivation</button>
+        <button type="button" role="tab" data-tab="about">About</button>
+        <button type="button" role="tab" data-tab="settings">Settings</button>
+      </nav>
+
+      <section id="metadata" class="chrome details-only metadata-card">
+        <div class="metadata-topline">
+          <p id="wallpaper-kicker" class="kicker">Preparing source</p>
+          <p id="wallpaper-credit" class="wallpaper-count"></p>
+        </div>
+        <h1 id="wallpaper-title">Preparing gallery…</h1>
+        <p id="attribution" class="attribution">
+          Original artwork · MyTV Art
+        </p>
+      </section>
+
+      <section id="controls" class="chrome details-only controls-card">
+        <span><kbd>←</kbd><kbd>→</kbd> Tabs</span>
+        <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+        <span><kbd>OK</kbd> Select / Change</span>
+        <span><kbd>Back</kbd> Close</span>
+      </section>
+
+      <aside id="source-browser" class="details-only source-browser" aria-label="Sources and app details">
+        <section class="tab-panel" data-tab-panel="bing">
+          <p class="tab-eyebrow">Wallpaper source</p>
+          <h3>Bing daily wallpapers</h3>
+          <p>Daily photography, cached for offline viewing.</p>
+          <p class="tab-action"><kbd>OK</kbd> Use this source</p>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="motivation" hidden>
+          <p class="tab-eyebrow">Wallpaper source</p>
+          <h3>Daily Motivation</h3>
+          <p>Original thoughts presented as quiet typographic art.</p>
+          <p class="tab-action"><kbd>OK</kbd> Use this source</p>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="about" hidden>
+          <p class="tab-eyebrow">Free · Ad-free · Open source</p>
+          <h3>github.com/thammegowda/mytv</h3>
+          <p>Submit your favorite quotes with a pull request, or thank the author by starring the repository.</p>
+        </section>
+
+        <section class="tab-panel settings-panel" data-tab-panel="settings" hidden>
+          <p class="tab-eyebrow">Display preferences</p>
+          <h3>Settings</h3>
+          <div class="settings-list">
+            <button type="button" class="setting-row is-selected" data-setting="fit">
+              <span>Image fit</span>
+              <strong id="fit-setting-value">Crop</strong>
+            </button>
+            <button type="button" class="setting-row" data-setting="interval">
+              <span>Change every</span>
+              <strong id="interval-setting-value">1 hour</strong>
+            </button>
+          </div>
+          <p class="settings-hint"><kbd>↑</kbd><kbd>↓</kbd> Choose <kbd>OK</kbd> Change</p>
+        </section>
+      </aside>
+
+      <div id="loading" class="loading" role="status">
+        <div class="loading-spinner"></div>
+        <span>Preparing gallery</span>
+      </div>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+      <div id="exit-dialog" class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="exit-dialog-title" aria-hidden="true">
+        <section class="confirm-card">
+          <p class="tab-eyebrow">Exit app</p>
+          <h2 id="exit-dialog-title">Leave MyTV Art?</h2>
+          <p>The wallpaper slideshow will stop.</p>
+          <div class="confirm-actions">
+            <button type="button" data-exit-choice="no" class="is-selected">No</button>
+            <button type="button" data-exit-choice="yes">Yes</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="src/bootstrap.js"></script>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "mytv-art",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/bootstrap.js && node --check src/app.js && node --check src/platform.js && node --check src/settings.js && node --check src/slideshow.js && node --check src/wallpaper-cache.js && node --check src/wallpapers.js && node --check scripts/dev-server.mjs",
+    "dev": "node scripts/dev-server.mjs",
+    "test": "node --test"
+  }
+}
