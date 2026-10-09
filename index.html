@@ -18,6 +18,7 @@
       <nav id="source-tabs" class="source-tabs details-only" role="tablist" aria-label="Content tabs">
         <button type="button" role="tab" data-tab="bing">Bing</button>
         <button type="button" role="tab" data-tab="motivation">Motivation</button>
+        <button type="button" role="tab" data-tab="books">Books</button>
         <button type="button" role="tab" data-tab="about">About</button>
         <button type="button" role="tab" data-tab="settings">Settings</button>
       </nav>
@@ -55,6 +56,13 @@
           <p class="tab-action"><kbd>OK</kbd> Use this source</p>
         </section>
 
+        <section class="tab-panel" data-tab-panel="books" hidden>
+          <p class="tab-eyebrow">Read on the big screen</p>
+          <h3>Books</h3>
+          <p>Continue reading with large, calm pages designed for the TV remote.</p>
+          <p class="tab-action"><kbd>OK</kbd> Open library</p>
+        </section>
+
         <section class="tab-panel" data-tab-panel="about" hidden>
           <p class="tab-eyebrow">Free · Ad-free · Open source</p>
           <h3>github.com/thammegowda/mytv</h3>
@@ -77,6 +85,63 @@
           <p class="settings-hint"><kbd>↑</kbd><kbd>↓</kbd> Choose <kbd>OK</kbd> Change</p>
         </section>
       </aside>
+
+      <section id="book-shell" class="book-shell" aria-label="Book reader" hidden>
+        <header class="book-unified-bar">
+          <nav id="book-mode-tabs" class="book-mode-tabs" aria-label="Book modes">
+            <button type="button" data-book-mode="art">Art</button>
+            <button type="button" data-book-mode="library" class="is-selected">Library</button>
+            <button type="button" data-book-mode="reader" disabled>Read</button>
+            <button type="button" data-book-mode="learning" disabled>Learn</button>
+          </nav>
+          <div class="book-unified-context">
+            <span id="book-context-status" class="book-context-status">Preparing library</span>
+            <div id="book-context-keys" class="book-context-keys"></div>
+          </div>
+        </header>
+
+        <section id="book-library" class="book-library">
+          <header class="book-library-header">
+            <div>
+              <p class="book-eyebrow">MyTV Reader</p>
+              <h2>Your library</h2>
+              <p id="book-library-status">Preparing books</p>
+            </div>
+            <div class="book-library-source">
+              <span class="book-source-dot"></span>
+              On this TV · Demo library
+            </div>
+          </header>
+
+          <div id="book-grid" class="book-grid" role="listbox" aria-label="Available books"></div>
+        </section>
+
+        <section id="book-reader" class="book-reader" hidden>
+          <div id="book-reader-loading" class="book-reader-loading" role="status" hidden></div>
+
+          <div id="book-stage" class="book-stage">
+            <div id="book-spread" class="book-spread">
+              <article id="book-left-page" class="book-paper-page left"></article>
+              <article id="book-right-page" class="book-paper-page right"></article>
+              <div id="book-turning-leaf" class="book-turning-leaf" aria-hidden="true">
+                <article id="book-turning-front" class="book-paper-page book-turning-face front"></article>
+                <article id="book-turning-back" class="book-paper-page book-turning-face back"></article>
+              </div>
+            </div>
+          </div>
+
+          <div id="book-pagination-measure" class="book-page-content book-pagination-measure" aria-hidden="true"></div>
+
+          <aside id="book-toc" class="book-toc" aria-label="Table of contents" hidden>
+            <div class="book-toc-heading">
+              <p class="book-eyebrow">Contents</p>
+              <h3>Chapters</h3>
+            </div>
+            <div id="book-toc-list" class="book-toc-list" role="listbox"></div>
+            <p><kbd>↑</kbd><kbd>↓</kbd> Choose <kbd>OK</kbd> Open <kbd>Back</kbd> Close</p>
+          </aside>
+        </section>
+      </section>
 
       <div id="loading" class="loading" role="status">
         <div class="loading-spinner"></div>

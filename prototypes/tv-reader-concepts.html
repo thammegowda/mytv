@@ -1,0 +1,1242 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MyTV Reader Concepts</title>
+    <style>
+      :root {
+        color: #f8f5ec;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        background: #060a0f;
+        --mint: #a7f2e3;
+        --paper: #f2eddf;
+        --ink: #25231e;
+        --muted-ink: #756f63;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-width: 100%;
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 0, #182534 0%, #080d14 46%, #05070b 100%);
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .prototype-nav {
+        display: flex;
+        gap: 0.24vw;
+        align-items: center;
+      }
+
+      .prototype-nav button {
+        padding: 0.36vw 0.68vw;
+        border: 1px solid transparent;
+        border-radius: 0.48vw;
+        color: rgba(255, 255, 255, 0.55);
+        font-size: 0.72vw;
+        background: transparent;
+      }
+
+      .prototype-nav button.is-selected {
+        border-color: rgba(167, 242, 227, 0.42);
+        color: #fff;
+        background: rgba(167, 242, 227, 0.1);
+      }
+
+      .tv-frame {
+        position: relative;
+        width: min(calc(100vw - 40px), calc((100vh - 40px) * 16 / 9));
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 10px;
+        background: #0a1018;
+        box-shadow:
+          0 35px 110px rgba(0, 0, 0, 0.62),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+
+      .unified-bar {
+        position: absolute;
+        z-index: 30;
+        top: 0;
+        right: 0;
+        left: 0;
+        display: flex;
+        align-items: center;
+        height: 4.4%;
+        padding: 0 1.15vw;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+        color: rgba(255, 255, 255, 0.58);
+        background:
+          linear-gradient(90deg, rgba(16, 24, 34, 0.98), rgba(7, 11, 17, 0.94));
+        box-shadow: 0 0.5vw 1.4vw rgba(0, 0, 0, 0.18);
+      }
+
+      .unified-context {
+        display: flex;
+        gap: 1.25vw;
+        align-items: center;
+        min-width: 0;
+        margin-left: auto;
+        font-size: 0.69vw;
+        white-space: nowrap;
+      }
+
+      .unified-status {
+        overflow: hidden;
+        color: rgba(255, 255, 255, 0.76);
+        font-weight: 600;
+        text-overflow: ellipsis;
+      }
+
+      .unified-keys {
+        display: flex;
+        gap: 0.72vw;
+        align-items: center;
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      .unified-keys span {
+        display: flex;
+        gap: 0.28vw;
+        align-items: center;
+      }
+
+      .unified-bar kbd {
+        min-width: 1.38vw;
+        padding: 0.17vw 0.34vw;
+        border-radius: 0.34vw;
+        font-size: 0.63vw;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        display: none;
+      }
+
+      .scene.is-active {
+        display: block;
+        animation: scene-in 260ms ease-out both;
+      }
+
+      .eyebrow {
+        margin: 0 0 0.45em;
+        color: var(--mint);
+        font-size: 0.78vw;
+        font-weight: 750;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .remote-help {
+        position: absolute;
+        right: 3.5%;
+        bottom: 3%;
+        display: flex;
+        gap: 1.1vw;
+        align-items: center;
+        color: rgba(255, 255, 255, 0.58);
+        font-size: 0.72vw;
+      }
+
+      kbd {
+        min-width: 1.75vw;
+        padding: 0.28vw 0.5vw;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 0.5vw;
+        color: #fff;
+        font: inherit;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.1);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      }
+
+      /* Scene 1: invitation */
+      .invitation {
+        isolation: isolate;
+        background:
+          linear-gradient(90deg, rgba(5, 10, 16, 0.93) 0%, rgba(5, 10, 16, 0.7) 43%, rgba(5, 10, 16, 0.05) 76%),
+          url("../assets/wallpapers/coastal-mist.svg") center / cover;
+      }
+
+      .invitation::after {
+        position: absolute;
+        z-index: -1;
+        inset: 0;
+        background:
+          linear-gradient(0deg, rgba(3, 6, 10, 0.48), transparent 36%),
+          radial-gradient(circle at 72% 42%, transparent 0%, rgba(4, 8, 13, 0.34) 72%);
+        content: "";
+      }
+
+      .invitation-copy {
+        position: absolute;
+        top: 14%;
+        left: 6%;
+        width: 45%;
+      }
+
+      .invitation h1 {
+        max-width: 850px;
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 4.3vw;
+        font-weight: 520;
+        line-height: 0.98;
+        letter-spacing: -0.045em;
+      }
+
+      .invitation-subtitle {
+        max-width: 670px;
+        margin: 1.5vw 0 0;
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 1.22vw;
+        line-height: 1.52;
+      }
+
+      .continue-card {
+        display: grid;
+        grid-template-columns: 6.1vw 1fr auto;
+        gap: 1.15vw;
+        align-items: center;
+        width: 41vw;
+        margin-top: 2.6vw;
+        padding: 0.8vw;
+        border: 2px solid rgba(167, 242, 227, 0.7);
+        border-radius: 1.3vw;
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.09), transparent 54%),
+          rgba(10, 20, 27, 0.72);
+        box-shadow:
+          0 1.6vw 5vw rgba(0, 0, 0, 0.35),
+          0 0 0 0.25vw rgba(167, 242, 227, 0.06);
+      }
+
+      .continue-cover {
+        width: 6.1vw;
+        height: 8.3vw;
+        border-radius: 0.5vw;
+        object-fit: cover;
+        box-shadow: 0 0.8vw 2vw rgba(0, 0, 0, 0.42);
+      }
+
+      .continue-copy strong {
+        display: block;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 1.45vw;
+        font-weight: 520;
+      }
+
+      .continue-copy span {
+        display: block;
+        margin-top: 0.42vw;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.82vw;
+      }
+
+      .continue-copy small {
+        display: block;
+        margin-top: 0.9vw;
+        color: var(--mint);
+        font-size: 0.7vw;
+        font-weight: 750;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .continue-action {
+        margin-right: 1vw;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 0.8vw;
+      }
+
+      .time-well-spent {
+        position: absolute;
+        right: 5.5%;
+        bottom: 6%;
+        display: flex;
+        gap: 1.5vw;
+        padding: 1vw 1.4vw;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 1vw;
+        color: rgba(255, 255, 255, 0.57);
+        font-size: 0.72vw;
+        background: rgba(8, 14, 21, 0.56);
+      }
+
+      .time-well-spent strong {
+        display: block;
+        margin-top: 0.2vw;
+        color: #fff;
+        font-size: 1.1vw;
+        font-weight: 540;
+      }
+
+      /* Scene 2: cinematic library */
+      .library {
+        padding: 6.2% 4% 3.2%;
+        background:
+          radial-gradient(circle at 82% 10%, rgba(73, 113, 123, 0.23), transparent 35%),
+          linear-gradient(145deg, #111b25, #070b11 64%);
+      }
+
+      .library-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        padding-bottom: 1.3vw;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .library h1 {
+        margin: 0;
+        font-size: 2.75vw;
+        font-weight: 570;
+        letter-spacing: -0.035em;
+      }
+
+      .library-stat {
+        color: rgba(255, 255, 255, 0.55);
+        font-size: 0.8vw;
+        text-align: right;
+      }
+
+      .library-stat strong {
+        display: block;
+        margin-bottom: 0.2vw;
+        color: #fff;
+        font-size: 1.15vw;
+        font-weight: 540;
+      }
+
+      .hero-book {
+        display: grid;
+        grid-template-columns: 10vw 1fr;
+        gap: 1.7vw;
+        align-items: center;
+        width: 35%;
+        margin-top: 1.8vw;
+        padding: 1vw;
+        border: 2px solid rgba(167, 242, 227, 0.78);
+        border-radius: 1.3vw;
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.09), transparent),
+          rgba(73, 120, 113, 0.12);
+        box-shadow: 0 1.3vw 4vw rgba(0, 0, 0, 0.32);
+      }
+
+      .hero-book img {
+        width: 10vw;
+        height: 14vw;
+        border-radius: 0.55vw;
+        object-fit: cover;
+        box-shadow: 0 0.9vw 2vw rgba(0, 0, 0, 0.42);
+      }
+
+      .hero-book h2 {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 2.15vw;
+        font-weight: 520;
+        line-height: 1.08;
+      }
+
+      .hero-book p {
+        margin: 0.5vw 0 0;
+        color: rgba(255, 255, 255, 0.58);
+        font-size: 0.88vw;
+      }
+
+      .hero-book .progress-label {
+        margin-top: 1.2vw;
+        color: var(--mint);
+        font-size: 0.7vw;
+        font-weight: 750;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .shelf {
+        position: absolute;
+        right: 4%;
+        bottom: 15%;
+        left: 42%;
+        display: flex;
+        gap: 1.4vw;
+        align-items: flex-end;
+        height: 55%;
+        padding: 0 1vw 1.25vw;
+        border-bottom: 0.42vw solid rgba(134, 104, 75, 0.38);
+        box-shadow: 0 0.8vw 1vw -0.8vw rgba(0, 0, 0, 0.8);
+      }
+
+      .shelf-book {
+        position: relative;
+        width: 7.8vw;
+        height: 11.4vw;
+        overflow: hidden;
+        border-radius: 0.4vw;
+        box-shadow: 0 0.8vw 1.6vw rgba(0, 0, 0, 0.35);
+        transform: translateY(0);
+      }
+
+      .shelf-book:nth-child(2) {
+        height: 12.2vw;
+      }
+
+      .shelf-book:nth-child(3) {
+        height: 10.8vw;
+      }
+
+      .shelf-book:nth-child(4) {
+        height: 12.7vw;
+      }
+
+      .shelf-book::after {
+        position: absolute;
+        right: 0.72vw;
+        bottom: 0.7vw;
+        left: 0.72vw;
+        color: rgba(255, 255, 255, 0.87);
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 0.83vw;
+        line-height: 1.08;
+        content: attr(data-title);
+      }
+
+      .shelf-book.one {
+        background: linear-gradient(145deg, #64506f, #1c1932);
+      }
+
+      .shelf-book.two {
+        background: linear-gradient(145deg, #476c72, #102329);
+      }
+
+      .shelf-book.three {
+        background: linear-gradient(145deg, #a47754, #3b2118);
+      }
+
+      .shelf-book.four {
+        background: linear-gradient(145deg, #5b704a, #192518);
+      }
+
+      /* Scene 3: reading theater */
+      .reader,
+      .insight {
+        isolation: isolate;
+        perspective: 1600px;
+        background:
+          radial-gradient(ellipse at 50% -12%, rgba(255, 224, 171, 0.12), transparent 43%),
+          radial-gradient(ellipse at center, #27313a 0%, #111820 54%, #080c12 100%);
+      }
+
+      .reader::after,
+      .insight::after {
+        position: absolute;
+        z-index: 11;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(ellipse at 50% 48%, transparent 52%, rgba(2, 5, 8, 0.1) 80%, rgba(2, 5, 8, 0.22) 100%);
+        content: "";
+      }
+
+      .book-stage {
+        position: absolute;
+        z-index: 2;
+        top: 5.25%;
+        right: 0.85%;
+        bottom: 1.15%;
+        left: 0.85%;
+        filter: drop-shadow(0 1.5vw 2.5vw rgba(0, 0, 0, 0.43));
+      }
+
+      .book-spread {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        border-radius: 0.55vw;
+        background: var(--paper);
+        transform: rotateX(0.8deg);
+        transform-style: preserve-3d;
+      }
+
+      .book-spread::before {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 3.4vw;
+        background:
+          linear-gradient(90deg,
+            transparent 0%,
+            rgba(73, 61, 45, 0.08) 20%,
+            rgba(49, 40, 28, 0.2) 48%,
+            rgba(255, 255, 255, 0.2) 53%,
+            rgba(73, 61, 45, 0.08) 78%,
+            transparent 100%);
+        pointer-events: none;
+        content: "";
+        transform: translateX(-50%);
+      }
+
+      .book-spread.is-turning-next::before {
+        animation: gutter-turn-next 760ms cubic-bezier(0.45, 0.05, 0.18, 1) both;
+      }
+
+      .book-spread.is-turning-previous::before {
+        animation: gutter-turn-previous 760ms cubic-bezier(0.45, 0.05, 0.18, 1) both;
+      }
+
+      .book-page {
+        position: relative;
+        overflow: hidden;
+        padding: 4.7% 5.4% 5.2%;
+        color: var(--ink);
+        font-family: Georgia, "Times New Roman", serif;
+        background:
+          linear-gradient(180deg, rgba(255, 247, 220, 0.18), transparent 31%),
+          linear-gradient(90deg, rgba(92, 72, 47, 0.035), transparent 11%),
+          var(--paper);
+        backface-visibility: hidden;
+      }
+
+      .book-page.left {
+        border-radius: 0.55vw 0 0 0.55vw;
+        background:
+          linear-gradient(180deg, rgba(255, 247, 220, 0.18), transparent 31%),
+          linear-gradient(270deg, rgba(92, 72, 47, 0.055), transparent 13%),
+          var(--paper);
+      }
+
+      .book-page.right {
+        border-radius: 0 0.55vw 0.55vw 0;
+      }
+
+      .page-running-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2.3vw;
+        color: #81796c;
+        font-family: Arial, sans-serif;
+        font-size: 0.66vw;
+        font-weight: 700;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .page-content {
+        font-size: 1.48vw;
+        line-height: 1.62;
+      }
+
+      .page-content p {
+        margin: 0 0 1.1em;
+      }
+
+      .page-content .chapter-opening {
+        margin-bottom: 1.3vw;
+        font-size: 2.6vw;
+        font-weight: 520;
+        line-height: 1.05;
+      }
+
+      .spoken-sentence {
+        margin: 0 -0.12em;
+        padding: 0.03em 0.12em 0.11em;
+        border-radius: 0.18em;
+        background: rgba(75, 177, 159, 0.23);
+        box-shadow: inset 0 -0.07em 0 rgba(52, 139, 124, 0.38);
+      }
+
+      .page-number {
+        position: absolute;
+        bottom: 2.4%;
+        left: 0;
+        width: 100%;
+        color: #898174;
+        font-family: Arial, sans-serif;
+        font-size: 0.72vw;
+        text-align: center;
+      }
+
+      .turning-leaf {
+        position: absolute;
+        z-index: 8;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        display: none;
+        width: 50%;
+        transform: rotateY(0deg);
+        transform-origin: left center;
+        transform-style: preserve-3d;
+        pointer-events: none;
+      }
+
+      .turning-leaf.is-next {
+        display: block;
+        animation: turn-next 760ms cubic-bezier(0.45, 0.05, 0.18, 1) both;
+      }
+
+      .turning-leaf.is-previous {
+        display: block;
+        left: 0;
+        transform-origin: right center;
+        animation: turn-previous 760ms cubic-bezier(0.45, 0.05, 0.18, 1) both;
+      }
+
+      .turning-face {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        transform-style: preserve-3d;
+      }
+
+      .turning-face.front {
+        transform: rotateY(0deg) translateZ(0.2px);
+      }
+
+      .turning-face.back {
+        transform: rotateY(180deg) translateZ(0.2px);
+      }
+
+      .turning-face::after {
+        position: absolute;
+        z-index: 4;
+        inset: 0;
+        opacity: 0;
+        pointer-events: none;
+        content: "";
+      }
+
+      .turning-leaf.is-next .turning-face.front::after {
+        background: linear-gradient(90deg, transparent 44%, rgba(35, 27, 18, 0.34));
+        animation: shade-front-next 760ms ease-in-out both;
+      }
+
+      .turning-leaf.is-next .turning-face.back::after {
+        background: linear-gradient(90deg, rgba(35, 27, 18, 0.3), transparent 58%);
+        animation: shade-back-next 760ms ease-in-out both;
+      }
+
+      .turning-leaf.is-previous .turning-face.front::after {
+        background: linear-gradient(270deg, transparent 44%, rgba(35, 27, 18, 0.34));
+        animation: shade-front-next 760ms ease-in-out both;
+      }
+
+      .turning-leaf.is-previous .turning-face.back::after {
+        background: linear-gradient(270deg, rgba(35, 27, 18, 0.3), transparent 58%);
+        animation: shade-back-next 760ms ease-in-out both;
+      }
+
+      .turning-leaf::after {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: -0.12vw;
+        bottom: 0;
+        width: 0.22vw;
+        border-radius: 50%;
+        background: rgba(77, 62, 43, 0.2);
+        box-shadow: 0 0 0.5vw rgba(39, 30, 20, 0.18);
+        opacity: 0;
+        content: "";
+        backface-visibility: hidden;
+      }
+
+      .turning-leaf.is-next::after,
+      .turning-leaf.is-previous::after {
+        animation: leaf-edge-shadow 760ms ease-in-out both;
+      }
+
+      /* Scene 4: contextual learning */
+      .insight .book-stage {
+        right: 32.4%;
+        filter:
+          brightness(0.68)
+          drop-shadow(0 1.5vw 2.5vw rgba(0, 0, 0, 0.43));
+        transition: right 240ms ease;
+      }
+
+      .word-selection {
+        padding: 0 0.13em 0.07em;
+        border-radius: 0.16em;
+        color: #102520;
+        background: var(--mint);
+      }
+
+      .insight-panel {
+        position: absolute;
+        z-index: 13;
+        top: 5.25%;
+        right: 0.85%;
+        bottom: 1.15%;
+        width: 30.5%;
+        padding: 2.3vw 2.2vw;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 1.35vw;
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.075), transparent 48%),
+          rgba(10, 17, 25, 0.96);
+        box-shadow: 0 2vw 6vw rgba(0, 0, 0, 0.48);
+      }
+
+      .insight-panel h2 {
+        margin: 0.35vw 0 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 2.5vw;
+        font-weight: 520;
+      }
+
+      .pronunciation {
+        margin-top: 0.45vw;
+        color: var(--mint);
+        font-size: 0.92vw;
+      }
+
+      .definition {
+        margin-top: 2vw;
+        color: rgba(255, 255, 255, 0.86);
+        font-size: 1.12vw;
+        line-height: 1.5;
+      }
+
+      .definition strong {
+        display: block;
+        margin-bottom: 0.55vw;
+        color: rgba(255, 255, 255, 0.48);
+        font-size: 0.7vw;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .example {
+        margin-top: 1.4vw;
+        padding: 1.1vw 1.2vw;
+        border-left: 0.22vw solid rgba(167, 242, 227, 0.55);
+        color: rgba(255, 255, 255, 0.62);
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 0.92vw;
+        font-style: italic;
+        line-height: 1.45;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .insight-actions {
+        position: absolute;
+        right: 2.2vw;
+        bottom: 2.1vw;
+        left: 2.2vw;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.65vw;
+      }
+
+      .insight-action {
+        padding: 0.8vw;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 0.65vw;
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 0.78vw;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.045);
+      }
+
+      .insight-action.is-selected {
+        border-color: rgba(167, 242, 227, 0.58);
+        color: #fff;
+        background: rgba(167, 242, 227, 0.11);
+      }
+
+      @keyframes scene-in {
+        from {
+          opacity: 0;
+          transform: scale(1.01);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes turn-next {
+        0% {
+          box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+          transform: rotateY(0deg);
+        }
+        46% {
+          box-shadow: -1.8vw 0.5vw 3.1vw rgba(0, 0, 0, 0.34);
+        }
+        84% {
+          box-shadow: -0.6vw 0.15vw 1.1vw rgba(0, 0, 0, 0.18);
+        }
+        100% {
+          box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+          transform: rotateY(-180deg);
+        }
+      }
+
+      @keyframes turn-previous {
+        0% {
+          transform: rotateY(0deg);
+        }
+        46% {
+          box-shadow: 1.8vw 0.5vw 3.1vw rgba(0, 0, 0, 0.34);
+        }
+        84% {
+          box-shadow: 0.6vw 0.15vw 1.1vw rgba(0, 0, 0, 0.18);
+        }
+        100% {
+          box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+          transform: rotateY(180deg);
+        }
+      }
+
+      @keyframes gutter-turn-next {
+        0% {
+          opacity: 1;
+          transform: translateX(-50%) scaleX(1);
+        }
+        18% {
+          opacity: 0;
+          transform: translateX(-50%) scaleX(0.7);
+        }
+        68% {
+          opacity: 0;
+          transform: translateX(-50%) scaleX(0.7);
+        }
+        100% {
+          opacity: 1;
+          transform: translateX(-50%) scaleX(1);
+        }
+      }
+
+      @keyframes gutter-turn-previous {
+        0% {
+          opacity: 1;
+          transform: translateX(-50%) scaleX(1);
+        }
+        18% {
+          opacity: 0;
+          transform: translateX(-50%) scaleX(0.7);
+        }
+        68% {
+          opacity: 0;
+          transform: translateX(-50%) scaleX(0.7);
+        }
+        100% {
+          opacity: 1;
+          transform: translateX(-50%) scaleX(1);
+        }
+      }
+
+      @keyframes leaf-edge-shadow {
+        0%,
+        100% {
+          opacity: 0;
+        }
+        28%,
+        68% {
+          opacity: 0.85;
+        }
+      }
+
+      @keyframes shade-front-next {
+        0% {
+          opacity: 0;
+        }
+        48% {
+          opacity: 0.82;
+        }
+        100% {
+          opacity: 0.08;
+        }
+      }
+
+      @keyframes shade-back-next {
+        0% {
+          opacity: 0.08;
+        }
+        52% {
+          opacity: 0.76;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation-duration: 1ms !important;
+          transition-duration: 1ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="tv-frame">
+      <header class="unified-bar">
+        <nav class="prototype-nav" aria-label="Mockup scenes">
+          <button type="button" data-scene="invitation" class="is-selected">Invitation</button>
+          <button type="button" data-scene="library">Library</button>
+          <button type="button" data-scene="reader">Read</button>
+          <button type="button" data-scene="insight">Learn</button>
+        </nav>
+        <div class="unified-context">
+          <span id="unified-status" class="unified-status"></span>
+          <div id="unified-keys" class="unified-keys"></div>
+        </div>
+      </header>
+
+      <section class="scene invitation is-active" data-scene-panel="invitation">
+        <div class="invitation-copy">
+          <p class="eyebrow">A quieter choice</p>
+          <h1>Your next twenty minutes can stay with you.</h1>
+          <p class="invitation-subtitle">
+            Step out of autoplay. Return to a story, learn a new idea, or simply read together.
+          </p>
+          <div class="continue-card">
+            <img class="continue-cover" src="../assets/books/the-quiet-hour/cover.svg" alt="">
+            <div class="continue-copy">
+              <strong>The Quiet Hour</strong>
+              <span>Chapter 3 · Returning</span>
+              <small>67% complete · 14 minutes left</small>
+            </div>
+            <div class="continue-action"><kbd>OK</kbd> Continue</div>
+          </div>
+        </div>
+        <div class="time-well-spent">
+          <span>This week<strong>1h 42m reading</strong></span>
+          <span>Vocabulary<strong>12 words explored</strong></span>
+        </div>
+      </section>
+
+      <section class="scene library" data-scene-panel="library">
+        <header class="library-header">
+          <div>
+            <p class="eyebrow">MyTV Reader</p>
+            <h1>Your reading life</h1>
+          </div>
+          <div class="library-stat">
+            Time well spent
+            <strong>4 chapters this week</strong>
+          </div>
+        </header>
+
+        <article class="hero-book">
+          <img src="../assets/books/the-quiet-hour/cover.svg" alt="">
+          <div>
+            <p class="eyebrow">Continue reading</p>
+            <h2>The Quiet Hour</h2>
+            <p>MyTV Art · Chapter 3</p>
+            <p class="progress-label">67% read · <kbd>OK</kbd> Continue</p>
+          </div>
+        </article>
+
+        <div class="shelf" aria-label="More books">
+          <div class="shelf-book one" data-title="A Map of Small Wonders"></div>
+          <div class="shelf-book two" data-title="Learning to Notice"></div>
+          <div class="shelf-book three" data-title="The Night Garden"></div>
+          <div class="shelf-book four" data-title="Ideas That Travel"></div>
+        </div>
+
+      </section>
+
+      <section class="scene reader is-narrating" data-scene-panel="reader">
+        <div class="book-stage">
+          <div class="book-spread">
+            <article class="book-page left" id="left-book-page">
+              <div class="page-running-head"><span>The Quiet Hour</span><span>Attention</span></div>
+              <div class="page-content" id="left-page-content"></div>
+              <span class="page-number" id="left-page-number">24</span>
+            </article>
+            <article class="book-page right" id="right-book-page">
+              <div class="page-running-head"><span>Chapter Two</span><span>MyTV Art</span></div>
+              <div class="page-content" id="right-page-content"></div>
+              <span class="page-number" id="right-page-number">25</span>
+            </article>
+            <div class="turning-leaf" id="turning-leaf" aria-hidden="true">
+              <article class="book-page turning-face front" id="turning-front"></article>
+              <article class="book-page turning-face back" id="turning-back"></article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="scene insight" data-scene-panel="insight">
+        <div class="book-stage">
+          <div class="book-spread">
+            <article class="book-page left">
+              <div class="page-running-head"><span>The Quiet Hour</span><span>Attention</span></div>
+              <div class="page-content">
+                <p>The story carried her beyond the noise of the day and into a room made entirely of sentences.</p>
+                <p>There was a quiet <span class="word-selection">serendipity</span> in finding exactly the idea she needed without searching for it.</p>
+                <p>She stayed with the paragraph for a while, letting its meaning become her own.</p>
+              </div>
+              <span class="page-number">26</span>
+            </article>
+            <article class="book-page right">
+              <div class="page-running-head"><span>Chapter Two</span><span>MyTV Art</span></div>
+              <div class="page-content">
+                <p>Outside, windows brightened one by one. Each held a separate life: dinner, music, an argument, a child refusing sleep.</p>
+                <p>Mara felt no urge to know every detail. It was enough to understand that each light contained a world.</p>
+              </div>
+              <span class="page-number">27</span>
+            </article>
+          </div>
+        </div>
+
+        <aside class="insight-panel">
+          <p class="eyebrow">Word insight</p>
+          <h2>serendipity</h2>
+          <div class="pronunciation">/ˌserənˈdipədē/ · noun</div>
+          <div class="definition">
+            <strong>Meaning</strong>
+            The chance discovery of something valuable or delightful while looking for something else.
+          </div>
+          <div class="example">
+            “Finding the forgotten book on the train was pure serendipity.”
+          </div>
+          <div class="insight-actions">
+            <div class="insight-action is-selected"><kbd>OK</kbd> Hear it</div>
+            <div class="insight-action">Save word</div>
+            <div class="insight-action">Translate</div>
+            <div class="insight-action"><kbd>Back</kbd> Reading</div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script>
+      const spreads = [
+        {
+          left: `
+            <div class="chapter-opening">Attention</div>
+            <p>Attention is rarely lost in a single moment. It is given away in handfuls.</p>
+            <p>The next evening Mara returned to the chair by the window with a book. She had owned it for six years and had begun it four times.</p>
+            <p>She opened to the first page again.</p>
+          `,
+          right: `
+            <p>The opening paragraph was not difficult, but she read it twice. Her mind kept leaning toward the bowl near the door.</p>
+            <p><span class="spoken-sentence">After a page, the imagined messages weakened. After three pages, the street outside entered the story as rain.</span></p>
+            <p>After five pages, she no longer remembered to measure how long she had been reading.</p>
+          `,
+        },
+        {
+          left: `
+            <p>This was not concentration as she had pictured it. There was no locked door in the mind, no heroic refusal of distraction.</p>
+            <p>There was only the small act of returning: to the next sentence, to a name, to the shape of a thought unfolding across the page.</p>
+            <p><span class="spoken-sentence">Attention is not a possession. It is a practice of return.</span></p>
+          `,
+          right: `
+            <p>Sometimes she returned every minute. Sometimes the story carried her for ten.</p>
+            <p>The measure was not how rarely she wandered, but how gently she came back.</p>
+            <p>Halfway through the chapter, a phrase stopped her. She read it aloud. The words sounded different in the room.</p>
+          `,
+        },
+        {
+          left: `
+            <p>Outside, windows brightened one by one. Each held a separate life: dinner, music, an argument, a child refusing sleep.</p>
+            <p><span class="spoken-sentence">It was enough to see the lights and understand that every illuminated square contained a world larger than it appeared.</span></p>
+          `,
+          right: `
+            <p>When she closed the book, the phone still waited in the bowl. There were messages. None had become urgent through waiting.</p>
+            <p>The receipt marking her old stopping place remained many chapters ahead. For the first time, it looked reachable.</p>
+          `,
+        },
+      ];
+
+      let activeScene = "invitation";
+      let spreadIndex = 0;
+      let turning = false;
+
+      const sceneButtons = [...document.querySelectorAll("[data-scene]")];
+      const scenePanels = [...document.querySelectorAll("[data-scene-panel]")];
+      const readerScene = document.querySelector('[data-scene-panel="reader"]');
+      const unifiedStatus = document.querySelector("#unified-status");
+      const unifiedKeys = document.querySelector("#unified-keys");
+      const bookSpread = document.querySelector(".reader .book-spread");
+      const leftPage = document.querySelector("#left-book-page");
+      const rightPage = document.querySelector("#right-book-page");
+      const turningLeaf = document.querySelector("#turning-leaf");
+      const turningFront = document.querySelector("#turning-front");
+      const turningBack = document.querySelector("#turning-back");
+      let pendingTurn = null;
+
+      function updateUnifiedBar() {
+        const context = {
+          invitation: {
+            status: "A quieter choice · 20 minutes",
+            keys: `
+              <span><kbd>OK</kbd> Continue</span>
+              <span><kbd>→</kbd> Library</span>
+            `,
+          },
+          library: {
+            status: "Time well spent · 4 chapters this week",
+            keys: `
+              <span><kbd>←</kbd><kbd>→</kbd> Choose</span>
+              <span><kbd>OK</kbd> Open</span>
+              <span><kbd>Back</kbd> Art</span>
+            `,
+          },
+          reader: {
+            status:
+              `The Quiet Hour · pp. ${pageNumber(spreadIndex, "left")}–${pageNumber(spreadIndex, "right")} · ` +
+              (readerScene.classList.contains("is-narrating") ? "Narrating 1.0×" : "Paused"),
+            keys: `
+              <span><kbd>←</kbd><kbd>→</kbd> Turn</span>
+              <span><kbd>OK</kbd> ${readerScene.classList.contains("is-narrating") ? "Pause" : "Play"}</span>
+              <span><kbd>↑</kbd> Word</span>
+            `,
+          },
+          insight: {
+            status: "The Quiet Hour · Paused · Word insight",
+            keys: `
+              <span><kbd>←</kbd><kbd>→</kbd> Word</span>
+              <span><kbd>OK</kbd> Hear</span>
+              <span><kbd>Back</kbd> Read</span>
+            `,
+          },
+        }[activeScene];
+        unifiedStatus.textContent = context.status;
+        unifiedKeys.innerHTML = context.keys;
+      }
+
+      function showScene(scene) {
+        activeScene = scene;
+        for (const button of sceneButtons) {
+          button.classList.toggle("is-selected", button.dataset.scene === scene);
+        }
+        for (const panel of scenePanels) {
+          panel.classList.toggle("is-active", panel.dataset.scenePanel === scene);
+        }
+        updateUnifiedBar();
+      }
+
+      function pageNumber(index, side) {
+        return 24 + index * 2 + (side === "right" ? 1 : 0);
+      }
+
+      function pageMarkup(index, side) {
+        const spread = spreads[index];
+        const runningHead = side === "left"
+          ? "<span>The Quiet Hour</span><span>Attention</span>"
+          : "<span>Chapter Two</span><span>MyTV Art</span>";
+        return `
+          <div class="page-running-head">${runningHead}</div>
+          <div class="page-content">${spread[side]}</div>
+          <span class="page-number">${pageNumber(index, side)}</span>
+        `;
+      }
+
+      function renderBasePage(element, index, side) {
+        element.innerHTML = pageMarkup(index, side);
+      }
+
+      function renderTurningFace(element, index, side, face) {
+        element.className = `book-page turning-face ${face} ${side}`;
+        element.innerHTML = pageMarkup(index, side);
+      }
+
+      function renderSpread() {
+        renderBasePage(leftPage, spreadIndex, "left");
+        renderBasePage(rightPage, spreadIndex, "right");
+      }
+
+      function turnPage(direction) {
+        if (turning) return;
+        const nextIndex = Math.min(
+          Math.max(spreadIndex + direction, 0),
+          spreads.length - 1,
+        );
+        if (nextIndex === spreadIndex) return;
+
+        turning = true;
+        pendingTurn = { direction, nextIndex };
+
+        if (direction > 0) {
+          renderTurningFace(turningFront, spreadIndex, "right", "front");
+          renderTurningFace(turningBack, nextIndex, "left", "back");
+          renderBasePage(rightPage, nextIndex, "right");
+          bookSpread.className = "book-spread is-turning-next";
+          turningLeaf.className = "turning-leaf is-next";
+        } else {
+          renderTurningFace(turningFront, spreadIndex, "left", "front");
+          renderTurningFace(turningBack, nextIndex, "right", "back");
+          renderBasePage(leftPage, nextIndex, "left");
+          bookSpread.className = "book-spread is-turning-previous";
+          turningLeaf.className = "turning-leaf is-previous";
+        }
+      }
+
+      turningLeaf.addEventListener("animationend", (event) => {
+        if (event.target !== turningLeaf || !pendingTurn) return;
+        const { direction, nextIndex } = pendingTurn;
+        if (direction > 0) {
+          renderBasePage(leftPage, nextIndex, "left");
+        } else {
+          renderBasePage(rightPage, nextIndex, "right");
+        }
+        spreadIndex = nextIndex;
+        pendingTurn = null;
+        bookSpread.className = "book-spread";
+        turningLeaf.className = "turning-leaf";
+        turningFront.replaceChildren();
+        turningBack.replaceChildren();
+        turning = false;
+        updateUnifiedBar();
+      });
+
+      sceneButtons.forEach((button) => {
+        button.addEventListener("click", () => showScene(button.dataset.scene));
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (/^[1-4]$/.test(event.key)) {
+          showScene(sceneButtons[Number(event.key) - 1].dataset.scene);
+          return;
+        }
+        if (activeScene !== "reader") return;
+        if (event.key === "ArrowRight") turnPage(1);
+        if (event.key === "ArrowLeft") turnPage(-1);
+        if (event.key === "ArrowUp") showScene("insight");
+        if (event.key === " " || event.key === "Enter") {
+          readerScene.classList.toggle("is-narrating");
+          updateUnifiedBar();
+        }
+      });
+
+      renderSpread();
+      updateUnifiedBar();
+    </script>
+  </body>
+</html>

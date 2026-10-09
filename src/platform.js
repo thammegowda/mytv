@@ -1,4 +1,6 @@
 const REMOTE_KEYS = [
+  "ChannelDown",
+  "ChannelUp",
   "MediaPlayPause",
 ];
 

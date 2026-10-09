@@ -1,0 +1,23 @@
+{
+  "id": "the-quiet-hour",
+  "title": "The Quiet Hour",
+  "author": "MyTV Art",
+  "language": "en",
+  "chapters": [
+    {
+      "id": "arriving",
+      "title": "1. Arriving",
+      "href": "chapter-01.html"
+    },
+    {
+      "id": "attention",
+      "title": "2. Attention",
+      "href": "chapter-02.html"
+    },
+    {
+      "id": "returning",
+      "title": "3. Returning",
+      "href": "chapter-03.html"
+    }
+  ]
+}

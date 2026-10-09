@@ -10,16 +10,24 @@ assets/quotes/         Community quote JSONL catalog and contribution guide
 scripts/dev-server.mjs Local Bing metadata development proxy
 scripts/install-tizen-sdk.sh
 src/app.js             UI, tabs, source switching, and lifecycle
+src/books.js           Book provider contract and persistent progress
+src/book-paginator.js  DOM measurement and two-page spread models
+src/book-page-turn.js  Seamless forward/reverse page animation
+src/tv-book-reader.js  Library, remote input, reader state, and UI
 src/platform.js        Samsung/Tizen API adapter
 src/settings.js        Validated persistent settings
 src/slideshow.js       Renderer and slideshow state
 src/wallpaper-cache.js IndexedDB wallpaper cache
 src/wallpapers.js      Bing, Motivation, and bundled providers
 test/                  Dependency-free Node tests
+assets/books/          Original bundled reader fixture
+prototypes/            Interactive design references; excluded from TV packages
 config.xml             Tizen application manifest
 ```
 
 The default presentation is artwork-only. Details, source selection, copyright information, project information, and settings are shown only after the user presses Up.
+
+The Books tab opens a full-screen TV library and a near-full-screen two-page reading theater. The bundled provider implements the same asynchronous catalog, manifest, and chapter interface intended for the future Android book server. Chapters are sanitized, measured into addressable page models, paired into spreads, and turned with four pre-rendered page surfaces. Reading progress is stored locally in `localStorage`.
 
 Samsung's hardware Back key (`keyCode 10009`) first closes details. From artwork-only mode it opens a No/Yes exit dialog; No is selected by default.
 

@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "check": "node --check src/bootstrap.js && node --check src/app.js && node --check src/platform.js && node --check src/settings.js && node --check src/slideshow.js && node --check src/wallpaper-cache.js && node --check src/wallpapers.js && node --check scripts/dev-server.mjs",
+    "check": "node --check src/bootstrap.js && node --check src/app.js && node --check src/book-page-turn.js && node --check src/book-paginator.js && node --check src/books.js && node --check src/tv-book-reader.js && node --check src/platform.js && node --check src/settings.js && node --check src/slideshow.js && node --check src/wallpaper-cache.js && node --check src/wallpapers.js && node --check scripts/dev-server.mjs",
     "dev": "node scripts/dev-server.mjs",
     "test": "node --test"
   }

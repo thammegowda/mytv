@@ -1,5 +1,10 @@
 import { createPlatform } from "./platform.js";
 import {
+  BookProgressStore,
+  BundledBookProvider,
+} from "./books.js";
+import { TvBookReader } from "./tv-book-reader.js";
+import {
   DEFAULT_SETTINGS,
   FIT_OPTIONS,
   INTERVAL_OPTIONS,
@@ -16,7 +21,7 @@ import {
 } from "./wallpapers.js";
 
 const SOURCE_TABS = ["bing", "motivation"];
-const tabs = ["bing", "motivation", "about", "settings"];
+const tabs = ["bing", "motivation", "books", "about", "settings"];
 const BING_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1_000;
 
 const elements = {
@@ -40,9 +45,55 @@ const elements = {
   exitDialog: document.querySelector("#exit-dialog"),
   exitButtons: [...document.querySelectorAll("[data-exit-choice]")],
   toast: document.querySelector("#toast"),
+  bookShell: document.querySelector("#book-shell"),
+  bookLibrary: document.querySelector("#book-library"),
+  bookLibraryStatus: document.querySelector("#book-library-status"),
+  bookGrid: document.querySelector("#book-grid"),
+  bookModeTabs: [...document.querySelectorAll("[data-book-mode]")],
+  bookContextStatus: document.querySelector("#book-context-status"),
+  bookContextKeys: document.querySelector("#book-context-keys"),
+  bookReader: document.querySelector("#book-reader"),
+  bookReaderLoading: document.querySelector("#book-reader-loading"),
+  bookStage: document.querySelector("#book-stage"),
+  bookSpread: document.querySelector("#book-spread"),
+  bookLeftPage: document.querySelector("#book-left-page"),
+  bookRightPage: document.querySelector("#book-right-page"),
+  bookTurningLeaf: document.querySelector("#book-turning-leaf"),
+  bookTurningFront: document.querySelector("#book-turning-front"),
+  bookTurningBack: document.querySelector("#book-turning-back"),
+  bookPaginationMeasure: document.querySelector("#book-pagination-measure"),
+  bookToc: document.querySelector("#book-toc"),
+  bookTocList: document.querySelector("#book-toc-list"),
 };
 
 const platform = createPlatform();
+const bookReader = new TvBookReader({
+  elements: {
+    shell: elements.bookShell,
+    library: elements.bookLibrary,
+    libraryStatus: elements.bookLibraryStatus,
+    bookGrid: elements.bookGrid,
+    modeTabs: elements.bookModeTabs,
+    contextStatus: elements.bookContextStatus,
+    contextKeys: elements.bookContextKeys,
+    reader: elements.bookReader,
+    readerLoading: elements.bookReaderLoading,
+    stage: elements.bookStage,
+    spread: elements.bookSpread,
+    leftPage: elements.bookLeftPage,
+    rightPage: elements.bookRightPage,
+    turningLeaf: elements.bookTurningLeaf,
+    turningFront: elements.bookTurningFront,
+    turningBack: elements.bookTurningBack,
+    paginationMeasure: elements.bookPaginationMeasure,
+    toc: elements.bookToc,
+    tocList: elements.bookTocList,
+  },
+  provider: new BundledBookProvider(),
+  progressStore: new BookProgressStore(),
+  onActiveChange: handleBookModeChange,
+  onToast: showToast,
+});
 let settings = { ...DEFAULT_SETTINGS };
 let slideshow;
 let renderer;
@@ -55,6 +106,7 @@ let toastTimeoutId;
 let sourceRefreshTimerId;
 let exitDialogVisible = false;
 let exitChoice = "no";
+let ambientPlaybackBeforeBooks = true;
 
 void initialize();
 
@@ -214,6 +266,8 @@ function handleKeyDown(event) {
     "Enter",
     " ",
     "MediaPlayPause",
+    "ChannelUp",
+    "ChannelDown",
     "Back",
     "Escape",
   ].includes(key);
@@ -224,6 +278,11 @@ function handleKeyDown(event) {
 
   if (exitDialogVisible) {
     handleExitDialogKey(key);
+    return;
+  }
+
+  if (bookReader.active) {
+    bookReader.handleKey(key);
     return;
   }
 
@@ -246,6 +305,8 @@ function handleKeyDown(event) {
     case " ":
       if (detailsVisible && SOURCE_TABS.includes(tabs[activeTabIndex])) {
         void activateSource(tabs[activeTabIndex]);
+      } else if (detailsVisible && tabs[activeTabIndex] === "books") {
+        void openBookLibrary();
       } else if (detailsVisible && tabs[activeTabIndex] === "settings") {
         cycleActiveSetting();
       } else if (!detailsVisible) {
@@ -390,7 +451,7 @@ function updateSourceUi() {
 }
 
 function handlePlaybackChange(playing) {
-  void updateScreenSaver(!playing);
+  void updateScreenSaver(!(playing || bookReader.active));
 }
 
 async function updateScreenSaver(enabled) {
@@ -404,6 +465,7 @@ async function updateScreenSaver(enabled) {
 function restoreScreenSaver() {
   clearTimeout(sourceRefreshTimerId);
   provider?.dispose?.();
+  bookReader.dispose();
   void platform.setScreenSaver(true).catch((error) => {
     console.error(error);
   });
@@ -426,9 +488,38 @@ function scheduleSourceRefresh() {
 function handleVisibilityChange() {
   if (document.hidden) {
     void updateScreenSaver(true);
-  } else if (slideshow?.playing) {
+  } else if (bookReader.active || slideshow?.playing) {
     void updateScreenSaver(false);
   }
+}
+
+async function openBookLibrary() {
+  toggleDetails(false);
+  try {
+    await bookReader.openLibrary();
+  } catch (error) {
+    bookReader.close();
+    showToast(`Unable to open library: ${error.message}`, true);
+  }
+}
+
+function handleBookModeChange(active) {
+  elements.app.classList.toggle("books-open", active);
+  if (active) {
+    clearTimeout(sourceRefreshTimerId);
+    ambientPlaybackBeforeBooks = Boolean(slideshow?.playing);
+    if (slideshow?.playing) {
+      slideshow.togglePlayback();
+    }
+    void updateScreenSaver(false);
+    return;
+  }
+
+  if (ambientPlaybackBeforeBooks && slideshow && !slideshow.playing) {
+    slideshow.togglePlayback();
+  }
+  scheduleSourceRefresh();
+  void updateScreenSaver(!slideshow?.playing);
 }
 
 function moveSettingSelection(delta) {

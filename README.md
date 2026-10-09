@@ -7,6 +7,7 @@ It currently includes:
 - Daily Bing photography
 - Offline wallpaper caching
 - Original motivational quote artwork
+- A remote-first book library and paginated reader
 - Smooth full-screen transitions
 - An artwork-only default view
 - On-demand details and copyright information
@@ -31,6 +32,28 @@ While details are open:
 | Up / Down | Move between Settings rows |
 | OK | Activate a source or change the selected setting |
 | Back | Close details |
+
+Choose **Books** in the details view to open the library.
+
+While browsing books:
+
+| Remote button | Action |
+| --- | --- |
+| Direction keys | Choose a book |
+| OK | Open the selected book |
+| Back | Return to artwork |
+
+While reading:
+
+| Remote button | Action |
+| --- | --- |
+| Left / Right | Previous or next two-page spread |
+| Channel Down / Up | Previous or next chapter |
+| Up | Open the table of contents |
+| OK / Play-Pause | Narration control when a phone is connected |
+| Back | Return to the book library |
+
+The current build includes an original bundled demo book. A paired-phone provider can replace the bundled provider without changing the TV reading interface.
 
 Slideshow intervals are 1 minute, 5 minutes, 15 minutes, 30 minutes, 1 hour, 3 hours, and 12 hours. The default is 1 hour.
 

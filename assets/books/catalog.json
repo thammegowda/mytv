@@ -1,0 +1,13 @@
+{
+  "books": [
+    {
+      "id": "the-quiet-hour",
+      "title": "The Quiet Hour",
+      "author": "MyTV Art",
+      "format": "EPUB demo",
+      "chapterCount": 3,
+      "cover": "the-quiet-hour/cover.svg",
+      "manifest": "the-quiet-hour/manifest.json"
+    }
+  ]
+}
