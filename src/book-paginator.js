@@ -8,11 +8,40 @@ const SPLITTABLE_BLOCKS = new Set([
   "PRE",
 ]);
 
+const FLATTENED_CONTAINER_BLOCKS = new Set([
+  "ARTICLE",
+  "ASIDE",
+  "DIV",
+  "DL",
+  "FIGURE",
+  "FOOTER",
+  "HEADER",
+  "MAIN",
+  "NAV",
+  "OL",
+  "SECTION",
+  "TABLE",
+  "TBODY",
+  "TD",
+  "TFOOT",
+  "TH",
+  "THEAD",
+  "TR",
+  "UL",
+]);
+
 export function normalizeBookText(value) {
   return String(value ?? "")
     .replace(/\u00a0/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+export function normalizeBookTextBlocks(values) {
+  return values
+    .map(normalizeBookText)
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function findBookTextBoundary(text, requestedEnd, minimumEnd = 0) {
@@ -91,9 +120,9 @@ export class BookPaginator {
     }
 
     const source = sanitizeChapterFragment(html, this.documentRef);
-    const queue = [...source.childNodes]
-      .map((node) => normalizeTopLevelNode(node, this.documentRef))
-      .filter(Boolean);
+    const queue = [...source.childNodes].flatMap((node) =>
+      flattenBookPageNodes(node, this.documentRef),
+    );
     const measure = this.measureElement;
     measure.style.width = `${Math.floor(width)}px`;
     measure.style.height = `${Math.floor(height)}px`;
@@ -107,7 +136,9 @@ export class BookPaginator {
       if (!hasPageContent(measure)) {
         return;
       }
-      const text = normalizeBookText(measure.textContent);
+      const text = normalizeBookTextBlocks(
+        [...measure.childNodes].map((node) => node.textContent),
+      );
       const page = {
         number: startPageNumber + pages.length,
         html: measure.innerHTML,
@@ -206,6 +237,22 @@ function normalizeTopLevelNode(node, documentRef) {
     return paragraph;
   }
   return null;
+}
+
+function flattenBookPageNodes(node, documentRef) {
+  const normalized = normalizeTopLevelNode(node, documentRef);
+  if (!normalized) {
+    return [];
+  }
+  if (
+    normalized.nodeType !== 1 ||
+    !FLATTENED_CONTAINER_BLOCKS.has(normalized.tagName)
+  ) {
+    return [normalized];
+  }
+  return [...normalized.childNodes].flatMap((child) =>
+    flattenBookPageNodes(child, documentRef),
+  );
 }
 
 function pageFits(measure) {

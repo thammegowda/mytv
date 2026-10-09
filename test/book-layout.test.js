@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   findBookTextBoundary,
   normalizeBookText,
+  normalizeBookTextBlocks,
   pageIndexToSpreadIndex,
   pairBookPages,
   spreadIndexToPageIndex,
@@ -61,6 +62,17 @@ test("normalizes book text for stable offsets", () => {
   assert.equal(
     normalizeBookText("  One\u00a0line.\n\n Another\tline. "),
     "One line. Another line.",
+  );
+});
+
+test("separates adjacent semantic blocks in page text", () => {
+  assert.equal(
+    normalizeBookTextBlocks([
+      "Frankenstein;",
+      "or, the Modern Prometheus",
+      "by Mary Shelley",
+    ]),
+    "Frankenstein; or, the Modern Prometheus by Mary Shelley",
   );
 });
 

@@ -29,6 +29,22 @@ The default presentation is artwork-only. Details, source selection, copyright i
 
 The Books tab opens a full-screen TV library and a near-full-screen two-page reading theater. The bundled provider implements the same asynchronous catalog, manifest, and chapter interface intended for the future Android book server. Chapters are sanitized, measured into addressable page models, paired into spreads, and turned with four pre-rendered page surfaces. Reading progress is stored locally in `localStorage`.
 
+### USB bookcasting development
+
+The Areada Android companion can expose the EPUB currently open on the phone through an access-code-protected, loopback-only development server. Open an EPUB, press the Cast button, note the temporary code shown in the phone toolbar, and forward its port over ADB:
+
+```bash
+adb forward tcp:8787 tcp:8787
+```
+
+Then open the TV app with the forwarded catalog:
+
+```text
+http://127.0.0.1:8080/?bookCatalog=http%3A%2F%2F127.0.0.1%3A8787%2Fv1%2Fcatalog.json%3Ftoken%3DACCESS_CODE
+```
+
+The external catalog is opt-in; without `bookCatalog`, the TV app continues to use its bundled demo library. Phone narration is grouped into paragraph-sized chunks rather than one request per sentence. Each chunk has word-range timing metadata and a seekable WAV endpoint with HTTP byte-range support. OK toggles playback, while Left/Right turns the spread and seeks the active audio chunk to the first aligned word on that spread.
+
 Samsung's hardware Back key (`keyCode 10009`) first closes details. From artwork-only mode it opens a No/Yes exit dialog; No is selected by default.
 
 ## Browser development

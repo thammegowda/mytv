@@ -6,6 +6,12 @@ import {
 } from "./book-paginator.js";
 import { BookPageTurner } from "./book-page-turn.js";
 import {
+  alignBookNarrationToPages,
+  BookNarrator,
+  clearBookNarrationHighlight,
+  highlightBookTextRange,
+} from "./book-narrator.js";
+import {
   formatBookProgress,
   moveBookGridSelection,
   wrapBookIndex,
@@ -16,12 +22,14 @@ export class TvBookReader {
     elements,
     provider,
     progressStore,
+    sourceLabel = "On this TV · Demo library",
     onActiveChange = () => {},
     onToast = () => {},
   }) {
     this.elements = elements;
     this.provider = provider;
     this.progressStore = progressStore;
+    this.sourceLabel = sourceLabel;
     this.onActiveChange = onActiveChange;
     this.onToast = onToast;
     this.paginator = new BookPaginator({
@@ -35,6 +43,25 @@ export class TvBookReader {
       front: elements.turningFront,
       back: elements.turningBack,
     });
+    this.narrationState = {
+      status: "idle",
+      chunkIndex: -1,
+      chunkCount: 0,
+    };
+    this.narrator = new BookNarrator({
+      audioElement: elements.narrationAudio,
+      onPosition: (position) => this.#showNarrationPosition(position),
+      onStateChange: (state) => {
+        this.narrationState = state;
+        if (this.mode === "reader") {
+          this.#renderUnifiedBar();
+        }
+      },
+      onChapterEnd: () => this.#continueNarrationChapter(),
+      onError: (error) => {
+        this.onToast(`Narration failed: ${error.message}`, true);
+      },
+    });
 
     this.mode = "closed";
     this.books = [];
@@ -43,6 +70,7 @@ export class TvBookReader {
     this.chapterIndex = 0;
     this.chapterTitle = "";
     this.chapterHtml = "";
+    this.chapterNarration = null;
     this.chapterLayouts = new Map();
     this.pages = [];
     this.spreads = [];
@@ -87,6 +115,7 @@ export class TvBookReader {
     }
 
     this.books = await this.provider.listBooks();
+    this.elements.librarySource.textContent = this.sourceLabel;
     this.selectedBookIndex = Math.min(
       this.selectedBookIndex,
       Math.max(0, this.books.length - 1),
@@ -116,6 +145,8 @@ export class TvBookReader {
       return;
     }
     this.#saveProgress();
+    this.narrator.stop();
+    clearBookNarrationHighlight();
     this.#cancelPendingRender();
     this.mode = "closed";
     this.book = null;
@@ -130,6 +161,7 @@ export class TvBookReader {
     clearTimeout(this.resizeTimer);
     globalThis.removeEventListener?.("resize", this.handleResize);
     this.resizeObserver?.disconnect();
+    this.narrator.dispose();
   }
 
   handleKey(key) {
@@ -186,10 +218,10 @@ export class TvBookReader {
         void this.#nextSpread();
         break;
       case "ChannelUp":
-        void this.#renderChapter(this.chapterIndex + 1, 0);
+        void this.#navigateToChapter(this.chapterIndex + 1, 0);
         break;
       case "ChannelDown":
-        void this.#renderChapter(this.chapterIndex - 1, 0);
+        void this.#navigateToChapter(this.chapterIndex - 1, 0);
         break;
       case "ArrowUp":
         this.tocSelection = this.chapterIndex;
@@ -199,7 +231,11 @@ export class TvBookReader {
       case "Enter":
       case " ":
       case "MediaPlayPause":
-        this.onToast("Narration controls will use this key when the phone connects");
+        if (this.narrator.available) {
+          void this.narrator.toggle();
+        } else {
+          this.onToast("Narration is unavailable for this chapter");
+        }
         break;
       case "Back":
       case "Escape":
@@ -225,7 +261,7 @@ export class TvBookReader {
       this.#renderTocSelection();
     } else if (key === "Enter" || key === " ") {
       this.elements.toc.hidden = true;
-      void this.#renderChapter(this.tocSelection, 0);
+      void this.#navigateToChapter(this.tocSelection, 0);
     } else if (
       key === "Back" ||
       key === "Escape" ||
@@ -270,6 +306,27 @@ export class TvBookReader {
         this.loading = false;
       }
     }
+  }
+
+  async #navigateToChapter(chapterIndex, requestedPage) {
+    if (
+      !this.book ||
+      chapterIndex < 0 ||
+      chapterIndex >= this.book.chapters.length
+    ) {
+      return false;
+    }
+    const resumeNarration = this.narrator.pauseForNavigation();
+    const rendered = await this.#renderChapter(
+      chapterIndex,
+      requestedPage,
+    );
+    if (rendered && resumeNarration && this.narrator.available) {
+      void this.narrator.toggle();
+    } else if (!rendered && resumeNarration) {
+      void this.narrator.toggle();
+    }
+    return rendered;
   }
 
   async #renderChapter(chapterIndex, requestedPage) {
@@ -322,6 +379,7 @@ export class TvBookReader {
       chapterIndex: this.chapterIndex,
       title: this.chapterTitle,
       html: this.chapterHtml,
+      narration: this.chapterNarration,
     });
     this.#cacheChapterLayout(layout);
     this.#applyChapterLayout(layout, requestedPage, { render: true });
@@ -329,6 +387,7 @@ export class TvBookReader {
 
   async #nextSpread() {
     if (this.spreadIndex < this.spreads.length - 1) {
+      const resumeNarration = this.narrator.pauseForNavigation();
       const token = this.renderToken;
       const targetIndex = this.spreadIndex + 1;
       const completed = await this.pageTurner.turn(
@@ -343,15 +402,25 @@ export class TvBookReader {
       ) {
         this.spreadIndex = targetIndex;
         this.pageIndex = spreadIndexToPageIndex(this.spreadIndex);
-        this.#afterPositionChange();
+        this.#afterPositionChange({ resumeNarration });
+      } else if (resumeNarration) {
+        void this.narrator.toggle();
       }
       return;
     }
-    await this.#turnAcrossChapter(this.chapterIndex + 1, "next");
+    if (this.chapterIndex < this.book.chapters.length - 1) {
+      const resumeNarration = this.narrator.pauseForNavigation();
+      await this.#turnAcrossChapter(
+        this.chapterIndex + 1,
+        "next",
+        resumeNarration,
+      );
+    }
   }
 
   async #previousSpread() {
     if (this.spreadIndex > 0) {
+      const resumeNarration = this.narrator.pauseForNavigation();
       const token = this.renderToken;
       const targetIndex = this.spreadIndex - 1;
       const completed = await this.pageTurner.turn(
@@ -366,14 +435,27 @@ export class TvBookReader {
       ) {
         this.spreadIndex = targetIndex;
         this.pageIndex = spreadIndexToPageIndex(this.spreadIndex);
-        this.#afterPositionChange();
+        this.#afterPositionChange({ resumeNarration });
+      } else if (resumeNarration) {
+        void this.narrator.toggle();
       }
       return;
     }
-    await this.#turnAcrossChapter(this.chapterIndex - 1, "previous");
+    if (this.chapterIndex > 0) {
+      const resumeNarration = this.narrator.pauseForNavigation();
+      await this.#turnAcrossChapter(
+        this.chapterIndex - 1,
+        "previous",
+        resumeNarration,
+      );
+    }
   }
 
-  async #turnAcrossChapter(chapterIndex, direction) {
+  async #turnAcrossChapter(
+    chapterIndex,
+    direction,
+    resumeNarration = false,
+  ) {
     if (
       chapterIndex < 0 ||
       chapterIndex >= this.book.chapters.length
@@ -413,11 +495,17 @@ export class TvBookReader {
       this.#renderTocSelection();
       this.#saveProgress();
       this.#prefetchAdjacentChapters();
+      if (resumeNarration && this.narrator.available) {
+        void this.narrator.toggle();
+      }
       return true;
     } catch (error) {
       if (token === this.renderToken && this.mode === "reader") {
         this.elements.contextStatus.textContent = previousStatus;
         this.onToast(`Unable to turn chapter: ${error.message}`, true);
+        if (resumeNarration) {
+          void this.narrator.toggle();
+        }
       }
       return false;
     } finally {
@@ -441,13 +529,17 @@ export class TvBookReader {
     const chapter = this.book.chapters[chapterIndex];
     const cacheKey = this.#chapterLayoutKey(chapterIndex, dimensions);
     if (!this.chapterLayouts.has(cacheKey)) {
-      const layoutPromise = this.provider
-        .loadChapter(this.book.id, chapter.id)
-        .then((loaded) =>
+      const layoutPromise = Promise.all([
+        this.provider.loadChapter(this.book.id, chapter.id),
+        this.provider.loadNarration?.(this.book.id, chapter.id) ??
+          Promise.resolve(null),
+      ])
+        .then(([loaded, narration]) =>
           this.#paginateLoadedChapter({
             chapterIndex,
             title: loaded.title,
             html: loaded.html,
+            narration,
             dimensions,
           }),
         )
@@ -464,6 +556,7 @@ export class TvBookReader {
     chapterIndex,
     title,
     html,
+    narration = null,
     dimensions = this.#pageDimensions(),
   }) {
     const pages = this.paginator
@@ -474,10 +567,22 @@ export class TvBookReader {
         chapterTitle: title,
         chapterIndex,
       }));
+    let alignedNarration = null;
+    if (narration) {
+      try {
+        alignedNarration = alignBookNarrationToPages(
+          narration,
+          pages,
+        );
+      } catch (error) {
+        console.warn("Unable to align book narration:", error);
+      }
+    }
     return {
       chapterIndex,
       title,
       html,
+      narration: alignedNarration,
       pages,
       spreads: pairBookPages(pages),
       dimensions,
@@ -488,6 +593,7 @@ export class TvBookReader {
     this.chapterIndex = layout.chapterIndex;
     this.chapterTitle = layout.title;
     this.chapterHtml = layout.html;
+    this.chapterNarration = layout.narration;
     this.pages = layout.pages;
     this.spreads = layout.spreads;
     this.pageCount = layout.pages.length;
@@ -504,6 +610,11 @@ export class TvBookReader {
     if (render) {
       this.pageTurner.renderSpread(layout.spreads[this.spreadIndex]);
     }
+    clearBookNarrationHighlight();
+    this.narrator.setNarration(
+      layout.narration,
+      this.pages[this.pageIndex]?.textStart ?? 0,
+    );
     this.#renderUnifiedBar();
   }
 
@@ -546,9 +657,70 @@ export class TvBookReader {
     }
   }
 
-  #afterPositionChange() {
+  #afterPositionChange({ resumeNarration = false } = {}) {
     this.#saveProgress();
     this.#renderUnifiedBar();
+    clearBookNarrationHighlight();
+    void this.narrator.seekToOffset(
+      this.pages[this.pageIndex]?.textStart ?? 0,
+      { resume: resumeNarration },
+    );
+  }
+
+  #showNarrationPosition(position) {
+    if (!position || this.mode !== "reader") {
+      clearBookNarrationHighlight();
+      return;
+    }
+    const pageArrayIndex = this.pages.findIndex(
+      (page) =>
+        position.start >= page.textStart &&
+        position.start < page.textEnd,
+    );
+    if (pageArrayIndex < 0) {
+      return;
+    }
+
+    const targetSpreadIndex = pageIndexToSpreadIndex(
+      pageArrayIndex,
+      this.spreads.length,
+    );
+    if (targetSpreadIndex !== this.spreadIndex) {
+      this.spreadIndex = targetSpreadIndex;
+      this.pageIndex = spreadIndexToPageIndex(targetSpreadIndex);
+      this.pageTurner.renderSpread(this.spreads[targetSpreadIndex]);
+      this.#saveProgress();
+      this.#renderUnifiedBar();
+    }
+
+    const page = this.pages[pageArrayIndex];
+    const pageElement =
+      pageArrayIndex % 2 === 0
+        ? this.elements.leftPage
+        : this.elements.rightPage;
+    const localStart = Math.max(position.start - page.textStart, 0);
+    const localEnd = Math.min(
+      position.end - page.textStart,
+      page.text.length,
+    );
+    highlightBookTextRange(pageElement, localStart, localEnd);
+  }
+
+  async #continueNarrationChapter() {
+    if (
+      this.mode !== "reader" ||
+      this.chapterIndex >= this.book.chapters.length - 1
+    ) {
+      return false;
+    }
+    const rendered = await this.#renderChapter(
+      this.chapterIndex + 1,
+      0,
+    );
+    if (rendered && this.narrator.available) {
+      void this.narrator.toggle();
+    }
+    return rendered;
   }
 
   #overallProgress() {
@@ -565,6 +737,8 @@ export class TvBookReader {
 
   #returnToLibrary() {
     this.#saveProgress();
+    this.narrator.stop();
+    clearBookNarrationHighlight();
     this.#cancelPendingRender();
     this.mode = "library";
     this.elements.toc.hidden = true;
@@ -703,11 +877,27 @@ export class TvBookReader {
         ? `pp. ${leftNumber}–${rightNumber}`
         : `p. ${leftNumber}`;
       const percent = Math.round(this.#overallProgress() * 100);
+      const narrationLabel = {
+        loading: "Preparing voice…",
+        playing:
+          `Listening ${this.narrationState.chunkIndex + 1}` +
+          `/${this.narrationState.chunkCount}`,
+        paused: "Narration paused",
+        error: "Narration unavailable",
+      }[this.narrationState.status];
       this.elements.contextStatus.textContent =
-        `${this.book.title} · ${this.chapterTitle} · ${pageLabel} · ${percent}%`;
+        `${this.book.title} · ${this.chapterTitle} · ${pageLabel} · ${percent}%` +
+        (narrationLabel ? ` · ${narrationLabel}` : "");
       this.elements.contextKeys.innerHTML = `
         <span><kbd>←</kbd><kbd>→</kbd> Turn</span>
         <span><kbd>CH</kbd> Chapter</span>
+        ${
+          this.narrator.available
+            ? `<span><kbd>OK</kbd> ${
+                this.narrator.playing ? "Pause" : "Listen"
+              }</span>`
+            : ""
+        }
         <span><kbd>↑</kbd> Contents</span>
         <span><kbd>Back</kbd> Library</span>
       `;

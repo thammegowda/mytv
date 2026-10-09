@@ -23,6 +23,10 @@ import {
 const SOURCE_TABS = ["bing", "motivation"];
 const tabs = ["bing", "motivation", "books", "about", "settings"];
 const BING_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1_000;
+const externalBookCatalogUrl =
+  new URLSearchParams(globalThis.location.search)
+    .get("bookCatalog")
+    ?.trim() || null;
 
 const elements = {
   app: document.querySelector("#app"),
@@ -48,6 +52,7 @@ const elements = {
   bookShell: document.querySelector("#book-shell"),
   bookLibrary: document.querySelector("#book-library"),
   bookLibraryStatus: document.querySelector("#book-library-status"),
+  bookLibrarySource: document.querySelector("#book-library-source"),
   bookGrid: document.querySelector("#book-grid"),
   bookModeTabs: [...document.querySelectorAll("[data-book-mode]")],
   bookContextStatus: document.querySelector("#book-context-status"),
@@ -62,6 +67,7 @@ const elements = {
   bookTurningFront: document.querySelector("#book-turning-front"),
   bookTurningBack: document.querySelector("#book-turning-back"),
   bookPaginationMeasure: document.querySelector("#book-pagination-measure"),
+  bookNarrationAudio: document.querySelector("#book-narration-audio"),
   bookToc: document.querySelector("#book-toc"),
   bookTocList: document.querySelector("#book-toc-list"),
 };
@@ -72,6 +78,7 @@ const bookReader = new TvBookReader({
     shell: elements.bookShell,
     library: elements.bookLibrary,
     libraryStatus: elements.bookLibraryStatus,
+    librarySource: elements.bookLibrarySource,
     bookGrid: elements.bookGrid,
     modeTabs: elements.bookModeTabs,
     contextStatus: elements.bookContextStatus,
@@ -86,11 +93,19 @@ const bookReader = new TvBookReader({
     turningFront: elements.bookTurningFront,
     turningBack: elements.bookTurningBack,
     paginationMeasure: elements.bookPaginationMeasure,
+    narrationAudio: elements.bookNarrationAudio,
     toc: elements.bookToc,
     tocList: elements.bookTocList,
   },
-  provider: new BundledBookProvider(),
+  provider: new BundledBookProvider(
+    externalBookCatalogUrl
+      ? { catalogUrl: externalBookCatalogUrl }
+      : undefined,
+  ),
   progressStore: new BookProgressStore(),
+  sourceLabel: externalBookCatalogUrl
+    ? "Connected phone · USB"
+    : "On this TV · Demo library",
   onActiveChange: handleBookModeChange,
   onToast: showToast,
 });

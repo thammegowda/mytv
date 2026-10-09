@@ -9,6 +9,7 @@ import {
   normalizeBookProgress,
   validateBookCatalog,
   validateBookManifest,
+  validateBookNarration,
   wrapBookIndex,
 } from "../src/books.js";
 
@@ -97,6 +98,53 @@ test("rejects unsafe paths and mismatched manifests", () => {
   );
 });
 
+test("validates ordered narration chunks and aligned text offsets", () => {
+  const narration = validateBookNarration(
+    {
+      chapterId: "chapter-1",
+      language: "en-US",
+      chunks: [
+        {
+          index: 0,
+          text: "First paragraph.",
+          start: 0,
+          end: 16,
+          audio: "audio/chapter-1/0.wav",
+          alignment: "alignment/chapter-1/0.json",
+        },
+        {
+          index: 1,
+          text: "Second paragraph.",
+          start: 17,
+          end: 34,
+          audio: "audio/chapter-1/1.wav",
+          alignment: "alignment/chapter-1/1.json",
+        },
+      ],
+    },
+    "chapter-1",
+  );
+
+  assert.equal(narration.chunks.length, 2);
+  assert.throws(
+    () =>
+      validateBookNarration({
+        chapterId: "chapter-1",
+        chunks: [
+          {
+            index: 0,
+            text: "Too short",
+            start: 0,
+            end: 20,
+            audio: "audio.wav",
+            alignment: "alignment.json",
+          },
+        ],
+      }),
+    /invalid text offsets/,
+  );
+});
+
 test("bundled provider resolves catalog-relative assets", async () => {
   const requests = [];
   const provider = new BundledBookProvider({
@@ -149,6 +197,90 @@ test("bundled provider resolves catalog-relative assets", async () => {
     "assets/books/catalog.json",
     "assets/books/quiet-hour/manifest.json",
     "assets/books/quiet-hour/chapter-one.html",
+  ]);
+});
+
+test("book provider resolves assets from an absolute phone catalog URL", async () => {
+  const requests = [];
+  const provider = new BundledBookProvider({
+    catalogUrl: "http://127.0.0.1:8787/v1/catalog.json",
+    fetchImpl: async (url) => {
+      requests.push(url);
+      if (url.endsWith("/catalog.json")) {
+        return jsonResponse({
+          books: [
+            {
+              id: "phone-book",
+              title: "Phone Book",
+              author: "Areada phone",
+              format: "EPUB",
+              chapterCount: 1,
+              cover: "books/phone-book/cover.svg",
+              manifest: "books/phone-book/manifest.json",
+            },
+          ],
+        });
+      }
+      if (url.endsWith("/manifest.json")) {
+        return jsonResponse({
+          id: "phone-book",
+          title: "Phone Book",
+          author: "Areada phone",
+          chapters: [
+            {
+              id: "chapter-1",
+              title: "One",
+              href: "chapters/chapter-1.html",
+              narration: "narration/chapter-1.json",
+            },
+          ],
+        });
+      }
+      if (url.endsWith("/narration/chapter-1.json")) {
+        return jsonResponse({
+          chapterId: "chapter-1",
+          language: "en-US",
+          chunks: [
+        {
+          index: 0,
+          text: "From the phone.",
+          start: 0,
+          end: 15,
+          audio: "audio/chapter-1/0.wav",
+          alignment: "alignment/chapter-1/0.json",
+        },
+          ],
+        });
+      }
+      if (url.endsWith("/chapter-1.html")) {
+        return {
+          ok: true,
+          text: async () => "<h1>One</h1><p>From the phone.</p>",
+        };
+      }
+      return { ok: false, status: 404 };
+    },
+  });
+
+  const [book] = await provider.listBooks();
+  await provider.openBook(book.id);
+  const chapter = await provider.loadChapter(book.id, "chapter-1");
+  const narration = await provider.loadNarration(book.id, "chapter-1");
+
+  assert.equal(
+    book.cover,
+    "http://127.0.0.1:8787/v1/books/phone-book/cover.svg",
+  );
+  assert.match(chapter.html, /From the phone/);
+  assert.equal(
+    narration.chunks[0].audio,
+    "http://127.0.0.1:8787/v1/books/phone-book/audio/chapter-1/0.wav",
+  );
+  assert.deepEqual(requests, [
+    "http://127.0.0.1:8787/v1/catalog.json",
+    "http://127.0.0.1:8787/v1/books/phone-book/manifest.json",
+    "http://127.0.0.1:8787/v1/books/phone-book/chapters/chapter-1.html",
+    "http://127.0.0.1:8787/v1/books/phone-book/narration/chapter-1.json",
   ]);
 });
 

@@ -894,6 +894,12 @@ kbd {
   text-rendering: optimizeLegibility;
 }
 
+.book-page-content::selection,
+.book-page-content *::selection {
+  color: inherit;
+  background: rgba(205, 163, 83, 0.42);
+}
+
 .book-paper-page > .book-page-content {
   position: absolute;
   top: 88px;

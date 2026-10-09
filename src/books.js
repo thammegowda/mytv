@@ -59,6 +59,13 @@ export function validateBookManifest(payload, expectedBookId) {
       id: chapterId,
       title: requireText(candidate.title, `${context} title`),
       href: requireAssetPath(candidate.href, `${context} href`),
+      narration:
+        candidate.narration == null
+          ? null
+          : requireAssetPath(
+              candidate.narration,
+              `${context} narration`,
+            ),
     };
   });
 
@@ -68,6 +75,60 @@ export function validateBookManifest(payload, expectedBookId) {
     author: requireText(payload.author, "Book manifest author"),
     language: requireText(payload.language ?? "en", "Book manifest language"),
     chapters,
+  };
+}
+
+export function validateBookNarration(payload, expectedChapterId) {
+  if (!payload || !Array.isArray(payload.chunks)) {
+    throw new Error("Book narration must contain a chunks array");
+  }
+  const chapterId = requireIdentifier(
+    payload.chapterId,
+    "Book narration chapter id",
+  );
+  if (expectedChapterId && chapterId !== expectedChapterId) {
+    throw new Error(
+      `Book narration chapter id "${chapterId}" does not match "${expectedChapterId}"`,
+    );
+  }
+
+  let previousEnd = 0;
+  const chunks = payload.chunks.map((candidate, index) => {
+    const context = `Narration chunk ${index + 1}`;
+    if (candidate?.index !== index) {
+      throw new Error(`${context} index must be ${index}`);
+    }
+    if (
+      !Number.isInteger(candidate.start) ||
+      !Number.isInteger(candidate.end) ||
+      candidate.start < previousEnd ||
+      candidate.end <= candidate.start ||
+      typeof candidate.text !== "string" ||
+      candidate.text.length !== candidate.end - candidate.start
+    ) {
+      throw new Error(`${context} has invalid text offsets`);
+    }
+    previousEnd = candidate.end;
+    return {
+      index,
+      text: requireText(candidate.text, `${context} text`),
+      start: candidate.start,
+      end: candidate.end,
+      audio: requireAssetPath(candidate.audio, `${context} audio`),
+      alignment: requireAssetPath(
+        candidate.alignment,
+        `${context} alignment`,
+      ),
+    };
+  });
+
+  return {
+    chapterId,
+    language: requireText(
+      payload.language ?? "und",
+      "Book narration language",
+    ),
+    chunks,
   };
 }
 
@@ -84,6 +145,7 @@ export class BundledBookProvider {
     this.catalogUrl = catalogUrl;
     this.catalogPromise = null;
     this.manifests = new Map();
+    this.narrations = new Map();
   }
 
   async listBooks() {
@@ -152,6 +214,52 @@ export class BundledBookProvider {
       ...chapter,
       html: await response.text(),
     };
+  }
+
+  async loadNarration(bookId, chapterId) {
+    const manifest = await this.openBook(bookId);
+    const chapter = manifest.chapters.find((item) => item.id === chapterId);
+    if (!chapter) {
+      throw new Error(`Chapter "${chapterId}" is not in book "${bookId}"`);
+    }
+    if (!chapter.narration) {
+      return null;
+    }
+
+    const cacheKey = `${bookId}:${chapterId}`;
+    if (!this.narrations.has(cacheKey)) {
+      const cached = await this.manifests.get(bookId);
+      const narrationUrl = resolveRelativeAssetUrl(
+        cached.manifestUrl,
+        chapter.narration,
+      );
+      this.narrations.set(
+        cacheKey,
+        this.#fetchJson(narrationUrl)
+          .then((payload) => {
+            const narration = validateBookNarration(payload, chapterId);
+            return {
+              ...narration,
+              chunks: narration.chunks.map((chunk) => ({
+                ...chunk,
+                audio: resolveRelativeAssetUrl(
+                  cached.manifestUrl,
+                  chunk.audio,
+                ),
+                alignment: resolveRelativeAssetUrl(
+                  cached.manifestUrl,
+                  chunk.alignment,
+                ),
+              })),
+            };
+          })
+          .catch((error) => {
+            this.narrations.delete(cacheKey);
+            throw error;
+          }),
+      );
+    }
+    return this.narrations.get(cacheKey);
   }
 
   async #catalog() {
